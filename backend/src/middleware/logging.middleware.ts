@@ -4,7 +4,7 @@ import { Logger } from '../lib/logger';
 /**
  * Extended Request interface to include timing and logging data
  */
-interface LoggingRequest extends Request {
+type LoggingRequest = Request & {
   startTime?: number;
   id?: string;
   tenantId?: string;
