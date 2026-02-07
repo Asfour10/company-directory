@@ -36,7 +36,7 @@ export class AuthService {
       expiresIn: this.jwtExpiresIn,
       issuer: 'company-directory',
       audience: 'company-directory-users',
-    });
+    } as jwt.SignOptions);
   }
 
   /**
@@ -47,7 +47,7 @@ export class AuthService {
     return jwt.sign(payload, this.refreshSecret, {
       expiresIn: this.refreshExpiresIn,
       issuer: 'company-directory',
-    });
+    } as jwt.SignOptions);
   }
 
   /**

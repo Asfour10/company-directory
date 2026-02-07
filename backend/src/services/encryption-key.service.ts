@@ -1,6 +1,25 @@
-import { KMSClient, GenerateDataKeyCommand, DecryptCommand } from '@aws-sdk/client-kms';
-import { KeyClient } from '@azure/keyvault-keys';
-import { DefaultAzureCredential } from '@azure/identity';
+// Conditional imports for cloud encryption providers (optional dependencies)
+let KMSClient: any, GenerateDataKeyCommand: any, DecryptCommand: any;
+let KeyClient: any, DefaultAzureCredential: any;
+
+try {
+  const awsSdk = require('@aws-sdk/client-kms');
+  KMSClient = awsSdk.KMSClient;
+  GenerateDataKeyCommand = awsSdk.GenerateDataKeyCommand;
+  DecryptCommand = awsSdk.DecryptCommand;
+} catch (e) {
+  // AWS SDK not installed - local encryption only
+}
+
+try {
+  const azureKeys = require('@azure/keyvault-keys');
+  const azureIdentity = require('@azure/identity');
+  KeyClient = azureKeys.KeyClient;
+  DefaultAzureCredential = azureIdentity.DefaultAzureCredential;
+} catch (e) {
+  // Azure SDK not installed - local encryption only
+}
+
 import crypto from 'crypto';
 
 export interface EncryptionKey {
@@ -22,8 +41,8 @@ export interface KeyManagementConfig {
 }
 
 export class EncryptionKeyService {
-  private kmsClient?: KMSClient;
-  private keyClient?: KeyClient;
+  private kmsClient?: any;
+  private keyClient?: any;
   private config: KeyManagementConfig;
   private keyCache: Map<string, Buffer> = new Map();
 
@@ -34,10 +53,20 @@ export class EncryptionKeyService {
 
   private initializeClients(): void {
     if (this.config.provider === 'aws' && this.config.awsConfig) {
+      if (!KMSClient) {
+        console.warn('AWS SDK not installed. Install @aws-sdk/client-kms for AWS KMS support.');
+        this.config.provider = 'local';
+        return;
+      }
       this.kmsClient = new KMSClient({ 
         region: this.config.awsConfig.region 
       });
     } else if (this.config.provider === 'azure' && this.config.azureConfig) {
+      if (!KeyClient || !DefaultAzureCredential) {
+        console.warn('Azure SDK not installed. Install @azure/keyvault-keys and @azure/identity for Azure Key Vault support.');
+        this.config.provider = 'local';
+        return;
+      }
       const credential = new DefaultAzureCredential();
       this.keyClient = new KeyClient(this.config.azureConfig.vaultUrl, credential);
     }

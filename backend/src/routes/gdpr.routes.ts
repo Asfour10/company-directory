@@ -3,9 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import { GdprService } from '../services/gdpr.service';
 import { DataRetentionService } from '../services/data-retention.service';
 // import { EncryptionKeyService } from '../services/encryption-key.service'; // Disabled for basic deployment
-import { authMiddleware } from '../middleware/auth.middleware';
+import { authenticateToken } from '../middleware/auth.middleware';
 import { tenantMiddleware } from '../middleware/tenant.middleware';
-import { authorizationMiddleware } from '../middleware/authorization.middleware';
+import { requireRole, Role } from '../middleware/authorization.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -19,7 +19,7 @@ const dataRetentionService = new DataRetentionService(prisma, gdprService);
  * Export user's personal data for GDPR compliance
  * Requirement 17.4: Provide data export functionality allowing Users to download their Employee Profile data in JSON format
  */
-router.get('/export', authMiddleware, tenantMiddleware, async (req, res) => {
+router.get('/export', authenticateToken, tenantMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id;
     const tenantId = req.tenant!.id;
@@ -50,7 +50,7 @@ router.get('/export', authMiddleware, tenantMiddleware, async (req, res) => {
  * Request deletion of user's personal data
  * Requirement 17.2: Allow Users to request deletion of their personal data through a self-service interface
  */
-router.post('/delete-request', authMiddleware, tenantMiddleware, async (req, res) => {
+router.post('/delete-request', authenticateToken, tenantMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id;
     const tenantId = req.tenant!.id;
@@ -76,7 +76,7 @@ router.post('/delete-request', authMiddleware, tenantMiddleware, async (req, res
  * GET /api/gdpr/delete-request/status
  * Get status of user's data deletion request
  */
-router.get('/delete-request/status', authMiddleware, tenantMiddleware, async (req, res) => {
+router.get('/delete-request/status', authenticateToken, tenantMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id;
     const tenantId = req.tenant!.id;
@@ -103,9 +103,9 @@ router.get('/delete-request/status', authMiddleware, tenantMiddleware, async (re
  * Admin only endpoint
  */
 router.get('/admin/pending-deletions', 
-  authMiddleware, 
+  authenticateToken, 
   tenantMiddleware, 
-  authorizationMiddleware(['admin', 'super_admin']),
+  requireRole(Role.ADMIN, Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenantId = req.tenant!.id;
@@ -129,9 +129,9 @@ router.get('/admin/pending-deletions',
  * Admin only endpoint
  */
 router.post('/admin/process-deletion/:requestId',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['admin', 'super_admin']),
+  requireRole(Role.ADMIN, Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const { requestId } = req.params;
@@ -159,9 +159,9 @@ router.post('/admin/process-deletion/:requestId',
  * Super Admin only endpoint
  */
 router.get('/admin/retention-stats',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenantId = req.tenant!.id;
@@ -186,9 +186,9 @@ router.get('/admin/retention-stats',
  * Requirement 17.1: Configurable retention with minimum 30 days and maximum 7 years
  */
 router.put('/admin/retention-policy',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenantId = req.tenant!.id;

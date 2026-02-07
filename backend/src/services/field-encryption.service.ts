@@ -37,7 +37,7 @@ export class FieldEncryptionService {
       const iv = crypto.randomBytes(16);
       
       // Create cipher
-      const cipher = crypto.createCipher(this.algorithm, encryptionKey);
+      const cipher = crypto.createCipheriv(this.algorithm, encryptionKey, iv) as crypto.CipherGCM;
       cipher.setAAD(Buffer.from(tenantId)); // Additional authenticated data
       
       // Encrypt the value
@@ -87,7 +87,7 @@ export class FieldEncryptionService {
       const iv = Buffer.from(encryptedField.iv, 'base64');
       
       // Create decipher
-      const decipher = crypto.createDecipher(this.algorithm, encryptionKey);
+      const decipher = crypto.createDecipheriv(this.algorithm, encryptionKey, iv) as crypto.DecipherGCM;
       decipher.setAAD(Buffer.from(tenantId)); // Additional authenticated data
       decipher.setAuthTag(authTag);
       

@@ -6,23 +6,43 @@ interface RequestWithTenant extends Request {
   tenant?: {
     id: string;
     name: string;
-  };
+    subdomain: string;
+    logoUrl: string | null;
+    primaryColor: string;
+    accentColor: string;
+    subscriptionTier: string;
+    userLimit: number;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    ssoEnabled: boolean;
+    ssoProvider: string | null;
+    ssoConfig: any;
+    isActive: boolean;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: Date | null;
+    dataRetentionDays: number;
+    encryptionKeyId: string | null;
+    encryptedDataKey: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 }
 
-export const metricsMiddleware = (req: RequestWithTenant, res: Response, next: NextFunction) => {
+export const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
+  const typedReq = req as any;
   
   // Increment in-flight requests
   metricsService.incrementRequestsInFlight();
 
   // Override res.end to capture metrics when response is sent
-  const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: any) {
+  const originalEnd = res.end.bind(res);
+  res.end = function(chunk?: any, encoding?: any, callback?: any): Response {
     const duration = (Date.now() - startTime) / 1000; // Convert to seconds
     const route = req.route?.path || req.path;
     const method = req.method;
     const statusCode = res.statusCode;
-    const tenantId = req.tenant?.id;
+    const tenantId = typedReq.tenant?.id;
 
     // Record HTTP request metrics
     metricsService.recordHttpRequest(method, route, statusCode, duration, tenantId);
@@ -42,7 +62,7 @@ export const metricsMiddleware = (req: RequestWithTenant, res: Response, next: N
     }
 
     // Call original end method
-    originalEnd.call(this, chunk, encoding);
+    return originalEnd(chunk, encoding, callback);
   };
 
   next();

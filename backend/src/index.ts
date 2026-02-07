@@ -22,7 +22,7 @@ import { metricsRoutes } from './routes/metrics.routes';
 import { healthRoutes } from './routes/health.routes';
 import { alertingRoutes } from './routes/alerting.routes';
 import { createErrorHandler } from './utils/errors';
-import { extractTenant, addTenantBranding } from './middleware/tenant.middleware';
+import { tenantMiddleware } from './middleware/tenant.middleware';
 import { scheduleAuditLogCleanup } from './utils/audit-cleanup';
 import { schedulerService } from './services/scheduler.service';
 import { RetentionSchedulerService } from './services/retention-scheduler.service';
@@ -71,8 +71,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // app.use(passport.initialize());
 
 // Tenant extraction middleware (for routes that need tenant context)
-app.use('/api', extractTenant);
-app.use('/api', addTenantBranding);
+app.use('/api', tenantMiddleware);
 
 // Health check routes (no tenant context needed)
 app.use('/', healthRoutes);

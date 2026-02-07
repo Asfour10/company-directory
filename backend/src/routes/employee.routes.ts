@@ -115,13 +115,17 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { employee, customFields } = await EmployeeService.getEmployeeByIdWithCustomFields(id, context);
 
   // Track profile view analytics
+  const source = req.query.source as string || 'direct';
+  const validSources = ['search', 'direct', 'org_chart'] as const;
+  const trackingSource = validSources.includes(source as any) ? source as typeof validSources[number] : 'direct';
+  
   await AnalyticsService.trackProfileView(
     req.tenant!.id,
     user?.id,
     {
       profileId: id,
       action: 'view',
-      source: req.query.source as string || 'direct',
+      source: trackingSource,
     }
   );
 

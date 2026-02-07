@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { tenantMiddleware, requireTenant } from '../middleware/tenant.middleware';
 import { AuthenticatedUser } from '../types';
 import { prisma } from '../lib/database';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextF
 };
 
 // Redis client for caching (optional - falls back to no caching if Redis unavailable)
-let redisClient: Redis.RedisClientType | null = null;
+let redisClient: RedisClientType | null = null;
 
 // Initialize Redis client if available
 const initializeRedis = async () => {
@@ -25,7 +25,6 @@ const initializeRedis = async () => {
         url: process.env.REDIS_URL,
         socket: {
           connectTimeout: 5000,
-          lazyConnect: true,
         },
       });
       

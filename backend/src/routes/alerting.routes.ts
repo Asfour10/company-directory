@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { alertingService } from '../services/alerting.service';
 import { logger } from '../lib/logger';
-import { authMiddleware } from '../middleware/auth.middleware';
-import { authorizationMiddleware } from '../middleware/authorization.middleware';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import { requireRole, Role } from '../middleware/authorization.middleware';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ router.post('/webhook/alerts', async (req: Request, res: Response) => {
  * GET /admin/alerts
  * Get active alerts (admin only)
  */
-router.get('/admin/alerts', authMiddleware, authorizationMiddleware(['admin', 'super_admin']), async (req: Request, res: Response) => {
+router.get('/admin/alerts', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const activeAlerts = alertingService.getActiveAlerts();
     res.json({
@@ -41,7 +41,7 @@ router.get('/admin/alerts', authMiddleware, authorizationMiddleware(['admin', 's
  * GET /admin/alerts/history
  * Get alert history (admin only)
  */
-router.get('/admin/alerts/history', authMiddleware, authorizationMiddleware(['admin', 'super_admin']), async (req: Request, res: Response) => {
+router.get('/admin/alerts/history', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 100;
     const alertHistory = alertingService.getAlertHistory(limit);
@@ -60,7 +60,7 @@ router.get('/admin/alerts/history', authMiddleware, authorizationMiddleware(['ad
  * POST /admin/alerts/:alertName/resolve
  * Manually resolve an alert (admin only)
  */
-router.post('/admin/alerts/:alertName/resolve', authMiddleware, authorizationMiddleware(['admin', 'super_admin']), async (req: Request, res: Response) => {
+router.post('/admin/alerts/:alertName/resolve', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { alertName } = req.params;
     await alertingService.resolveAlert(alertName);
@@ -76,7 +76,7 @@ router.post('/admin/alerts/:alertName/resolve', authMiddleware, authorizationMid
  * POST /admin/alerts/test
  * Trigger a test alert (admin only, for testing purposes)
  */
-router.post('/admin/alerts/test', authMiddleware, authorizationMiddleware(['super_admin']), async (req: Request, res: Response) => {
+router.post('/admin/alerts/test', authenticateToken, requireRole(Role.SUPER_ADMIN), async (req: Request, res: Response) => {
   try {
     const testAlert = {
       name: 'test_alert',

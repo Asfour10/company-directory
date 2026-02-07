@@ -1,12 +1,14 @@
 import express from 'express';
 import Stripe from 'stripe';
+import { PrismaClient } from '@prisma/client';
 import { billingService } from '../services/billing.service';
 import { schedulerService } from '../services/scheduler.service';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 import { tenantMiddleware, requireTenant } from '../middleware/tenant.middleware';
-import { requireRole } from '../middleware/authorization.middleware';
+import { requireRole, Role } from '../middleware/authorization.middleware';
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 /**
  * Stripe webhook endpoint
@@ -44,9 +46,9 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
  * GET /api/tenant/billing
  */
 router.get('/tenant/billing', 
-  authMiddleware, 
+  authenticateToken, 
   tenantMiddleware, 
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenant = req.tenant;
@@ -83,9 +85,9 @@ router.get('/tenant/billing',
  * POST /api/tenant/billing/upgrade
  */
 router.post('/tenant/billing/upgrade',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenant = req.tenant;
@@ -111,7 +113,7 @@ router.post('/tenant/billing/upgrade',
           );
           
           // Update tenant with customer ID
-          await req.prisma.tenant.update({
+          await prisma.tenant.update({
             where: { id: tenant.id },
             data: { stripeCustomerId: customer.id },
           });
@@ -141,9 +143,9 @@ router.post('/tenant/billing/upgrade',
  * POST /api/tenant/billing/portal
  */
 router.post('/tenant/billing/portal',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       const tenant = req.tenant;
@@ -232,9 +234,9 @@ router.get('/billing/plans', async (req, res) => {
  * POST /api/admin/notifications/check
  */
 router.post('/notifications/check',
-  authMiddleware,
+  authenticateToken,
   tenantMiddleware,
-  authorizationMiddleware(['super_admin']),
+  requireRole(Role.SUPER_ADMIN),
   async (req, res) => {
     try {
       await schedulerService.runNotificationChecksNow();

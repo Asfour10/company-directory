@@ -294,12 +294,16 @@ export class BillingService {
     // Get tenant ID from customer metadata
     if (invoice.customer && typeof invoice.customer === 'string') {
       const customer = await this.stripe.customers.retrieve(invoice.customer);
-      if (customer && !customer.deleted && customer.metadata?.tenantId) {
-        await notificationService.handlePaymentFailure(
-          customer.metadata.tenantId,
-          invoice.id,
-          invoice.amount_due
-        );
+      if (customer && !customer.deleted) {
+        const metadata = (customer as Stripe.Customer).metadata;
+        const tenantId = metadata?.tenantId;
+        if (tenantId) {
+          await notificationService.handlePaymentFailure(
+            tenantId,
+            invoice.id,
+            invoice.amount_due
+          );
+        }
       }
     }
   }

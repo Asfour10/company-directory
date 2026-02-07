@@ -10,8 +10,10 @@ interface LoggingRequest extends Request {
   tenantId?: string;
   user?: {
     id: string;
-    email?: string;
-    role?: string;
+    tenantId: string;
+    email: string;
+    role: string;
+    isActive: boolean;
   };
 }
 

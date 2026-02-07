@@ -55,14 +55,14 @@ router.get('/audit-logs', asyncHandler(async (req, res) => {
     if (startDate) {
       filter.startDate = new Date(startDate as string);
       if (isNaN(filter.startDate.getTime())) {
-        throw new AppError('VALIDATION_ERROR', 'Invalid startDate format', 400);
+        throw new AppError('Invalid startDate format', 400, 'VALIDATION_ERROR');
       }
     }
 
     if (endDate) {
       filter.endDate = new Date(endDate as string);
       if (isNaN(filter.endDate.getTime())) {
-        throw new AppError('VALIDATION_ERROR', 'Invalid endDate format', 400);
+        throw new AppError('Invalid endDate format', 400, 'VALIDATION_ERROR');
       }
     }
 
@@ -75,19 +75,18 @@ router.get('/audit-logs', asyncHandler(async (req, res) => {
     const pageSizeNum = parseInt(pageSize as string, 10);
 
     if (isNaN(pageNum) || pageNum < 1) {
-      throw new AppError('VALIDATION_ERROR', 'Invalid page number', 400);
+      throw new AppError('Invalid page number', 400, 'VALIDATION_ERROR');
     }
 
     if (isNaN(pageSizeNum) || pageSizeNum < 1 || pageSizeNum > 100) {
-      throw new AppError('VALIDATION_ERROR', 'Invalid page size (1-100)', 400);
+      throw new AppError('Invalid page size (1-100)', 400, 'VALIDATION_ERROR');
     }
-
-    filter.page = pageNum;
-    filter.pageSize = pageSizeNum;
 
     const result = await AuditService.getAuditLogs({
       tenantId,
       ...filter,
+      page: pageNum,
+      pageSize: pageSizeNum,
     });
 
     res.json({
@@ -123,14 +122,14 @@ router.get('/audit-logs/export', asyncHandler(async (req, res) => {
     if (startDate) {
       filter.startDate = new Date(startDate as string);
       if (isNaN(filter.startDate.getTime())) {
-        throw new AppError('VALIDATION_ERROR', 'Invalid startDate format', 400);
+        throw new AppError('Invalid startDate format', 400, 'VALIDATION_ERROR');
       }
     }
 
     if (endDate) {
       filter.endDate = new Date(endDate as string);
       if (isNaN(filter.endDate.getTime())) {
-        throw new AppError('VALIDATION_ERROR', 'Invalid endDate format', 400);
+        throw new AppError('Invalid endDate format', 400, 'VALIDATION_ERROR');
       }
     }
 
@@ -167,7 +166,7 @@ router.get('/audit-logs/statistics', asyncHandler(async (req, res) => {
 
     const daysNum = parseInt(days as string, 10);
     if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
-      throw new AppError('VALIDATION_ERROR', 'Invalid days parameter (1-365)', 400);
+      throw new AppError('Invalid days parameter (1-365)', 400, 'VALIDATION_ERROR');
     }
 
     const statistics = await AuditService.getAuditStatistics(tenantId, daysNum);
@@ -290,17 +289,17 @@ router.post('/employees/bulk-import/validate', asyncHandler(async (req, res) => 
 
     upload.single('csvFile')(req, res, async (err) => {
       if (err) {
-        throw new AppError('FILE_UPLOAD_ERROR', err.message, 400);
+        throw new AppError(err.message, 400, 'FILE_UPLOAD_ERROR');
       }
 
       if (!req.file) {
-        throw new AppError('VALIDATION_ERROR', 'CSV file is required', 400);
+        throw new AppError('CSV file is required', 400, 'VALIDATION_ERROR');
       }
 
       // Validate file
       const fileValidation = CSVImportService.validateFile(req.file);
       if (!fileValidation.isValid) {
-        throw new AppError('VALIDATION_ERROR', fileValidation.errors.join(', '), 400);
+        throw new AppError(fileValidation.errors.join(', '), 400, 'VALIDATION_ERROR');
       }
 
       // Validate import data
@@ -362,11 +361,11 @@ router.post('/employees/bulk-import', asyncHandler(async (req, res) => {
 
     upload.single('csvFile')(req, res, async (err) => {
       if (err) {
-        throw new AppError('FILE_UPLOAD_ERROR', err.message, 400);
+        throw new AppError(err.message, 400, 'FILE_UPLOAD_ERROR');
       }
 
       if (!req.file) {
-        throw new AppError('VALIDATION_ERROR', 'CSV file is required', 400);
+        throw new AppError('CSV file is required', 400, 'VALIDATION_ERROR');
       }
 
       // Parse import options from request body
@@ -380,7 +379,7 @@ router.post('/employees/bulk-import', asyncHandler(async (req, res) => {
       // Validate file
       const fileValidation = CSVImportService.validateFile(req.file);
       if (!fileValidation.isValid) {
-        throw new AppError('VALIDATION_ERROR', fileValidation.errors.join(', '), 400);
+        throw new AppError(fileValidation.errors.join(', '), 400, 'VALIDATION_ERROR');
       }
 
       // Perform bulk import
@@ -442,7 +441,7 @@ router.get('/employees/bulk-import/progress/:importId', asyncHandler(async (req,
     const { importId } = req.params;
     
     if (!importId) {
-      throw new AppError('VALIDATION_ERROR', 'Import ID is required', 400);
+      throw new AppError('Import ID is required', 400, 'VALIDATION_ERROR');
     }
 
     const progress = await BulkImportService.getImportProgress(importId, context);
@@ -492,7 +491,7 @@ router.get('/custom-fields/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-      throw new AppError('VALIDATION_ERROR', 'Custom field ID is required', 400);
+      throw new AppError('Custom field ID is required', 400, 'VALIDATION_ERROR');
     }
 
     const customField = await CustomFieldRepository.findById(tenantId, id);
@@ -541,7 +540,7 @@ router.put('/custom-fields/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-      throw new AppError('VALIDATION_ERROR', 'Custom field ID is required', 400);
+      throw new AppError('Custom field ID is required', 400, 'VALIDATION_ERROR');
     }
 
     const validatedData = validateUpdateCustomField(req.body);
@@ -569,7 +568,7 @@ router.delete('/custom-fields/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-      throw new AppError('VALIDATION_ERROR', 'Custom field ID is required', 400);
+      throw new AppError('Custom field ID is required', 400, 'VALIDATION_ERROR');
     }
 
     await CustomFieldRepository.delete(tenantId, id);
