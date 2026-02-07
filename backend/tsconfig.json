@@ -19,14 +19,19 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/index.ts",
+    "src/lib/*.ts",
+    "src/middleware/*.ts",
+    "src/repositories/*.ts",
+    "src/routes/*.ts",
+    "src/services/*.ts",
+    "src/types/*.ts",
+    "src/utils/errors.ts",
+    "src/validators/*.ts"
+  ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/__tests__/**",
-    "src/test-setup.ts",
-    "src/test-runner.ts",
-    "src/utils/test-helpers.ts"
+    "dist"
   ]
 }
