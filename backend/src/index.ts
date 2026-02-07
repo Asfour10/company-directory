@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import passport from 'passport';
+// import passport from 'passport'; // Disabled for basic deployment
 import { redisClient } from './lib/redis';
 import { Logger, setupGlobalErrorHandlers } from './lib/logger';
 import { loggingMiddlewareStack } from './middleware/logging.middleware';
@@ -12,7 +12,7 @@ import employeeRoutes from './routes/employee.routes';
 import searchRoutes from './routes/search.routes';
 import adminRoutes from './routes/admin.routes';
 import userRoutes from './routes/user.routes';
-import scimRoutes from './routes/scim.routes';
+// import scimRoutes from './routes/scim.routes'; // Disabled for basic deployment
 import orgChartRoutes from './routes/org-chart.routes';
 import tenantRoutes from './routes/tenant.routes';
 import analyticsRoutes from './routes/analytics.routes';
@@ -67,8 +67,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Initialize Passport
-app.use(passport.initialize());
+// Initialize Passport - Disabled for basic deployment
+// app.use(passport.initialize());
 
 // Tenant extraction middleware (for routes that need tenant context)
 app.use('/api', extractTenant);
@@ -90,7 +90,7 @@ app.use('/api/gdpr', gdprRoutes);
 app.use('/api', billingRoutes);
 
 // SCIM routes (separate from tenant middleware as they have their own auth)
-app.use('/scim/v2', scimRoutes);
+// app.use('/scim/v2', scimRoutes); // Disabled for basic deployment
 
 // Metrics endpoint (for Prometheus scraping)
 app.use('/', metricsRoutes);

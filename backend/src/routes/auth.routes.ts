@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
-import passport from 'passport';
+// import passport from 'passport'; // Disabled for basic deployment
 import { AuthService } from '../services/auth.service';
-import { SSOService } from '../services/sso.service';
+// import { SSOService } from '../services/sso.service'; // Disabled for basic deployment
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../lib/database';
 
 const router = Router();
 const authService = new AuthService();
-const ssoService = new SSOService();
+// const ssoService = new SSOService(); // Disabled for basic deployment
 
 /**
  * GET /api/auth/me - Get current user information
@@ -89,9 +89,11 @@ router.post('/logout', authenticateToken, async (req: Request, res: Response) =>
   }
 });
 
+// SSO routes disabled for basic deployment
+/*
 /**
  * GET /api/auth/sso/providers - Get available SSO providers
- */
+ *\/
 router.get('/sso/providers', (req: Request, res: Response) => {
   const providers = ssoService.getAvailableProviders();
   res.json({ providers });
@@ -99,7 +101,7 @@ router.get('/sso/providers', (req: Request, res: Response) => {
 
 /**
  * GET /api/auth/sso/:provider/login - Initiate SSO login
- */
+ *\/
 router.get('/sso/:provider/login', async (req: Request, res: Response, next) => {
   try {
     const { provider } = req.params;
@@ -160,7 +162,7 @@ router.get('/sso/:provider/login', async (req: Request, res: Response, next) => 
 
 /**
  * POST /api/auth/sso/:provider/callback - Handle SSO callback
- */
+ *\/
 router.post('/sso/:provider/callback', (req: Request, res: Response, next) => {
   const { provider } = req.params;
 
@@ -210,7 +212,7 @@ router.post('/sso/:provider/callback', (req: Request, res: Response, next) => {
 
 /**
  * GET /api/auth/sso/:provider/callback - Handle SSO callback (GET method for some providers)
- */
+ *\/
 router.get('/sso/:provider/callback', (req: Request, res: Response, next) => {
   const { provider } = req.params;
 
@@ -234,5 +236,6 @@ router.get('/sso/:provider/callback', (req: Request, res: Response, next) => {
     }
   })(req, res, next);
 });
+*/
 
 export default router;
