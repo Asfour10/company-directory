@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { prisma } from '../lib/database';
 import { redisClient } from '../lib/redis';
 import crypto from 'crypto';

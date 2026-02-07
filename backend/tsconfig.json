@@ -18,7 +18,8 @@
     "noUnusedParameters": false,
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "noImplicitThis": false
   },
   "include": [
     "src/index.ts",

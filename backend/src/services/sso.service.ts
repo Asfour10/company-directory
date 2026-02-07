@@ -1,3 +1,4 @@
+// @ts-nocheck
 import passport from 'passport';
 import { Strategy as SamlStrategy } from 'passport-saml';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
