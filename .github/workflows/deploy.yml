@@ -1,0 +1,211 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy to staging
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update image tags in deployment manifests
+          sed -i "s|IMAGE_TAG|${{ github.sha }}|g" k8s/staging/*.yaml
+          
+          # Apply database migrations
+          kubectl apply -f k8s/staging/migration-job.yaml
+          kubectl wait --for=condition=complete job/db-migration --timeout=300s
+          
+          # Deploy application
+          kubectl apply -f k8s/staging/
+          
+          # Wait for rollout to complete
+          kubectl rollout status deployment/backend-deployment --timeout=300s
+          kubectl rollout status deployment/frontend-deployment --timeout=300s
+
+      - name: Run E2E tests on staging
+        run: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Get staging URL
+          STAGING_URL=$(kubectl get service frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          # Run E2E tests against staging
+          npm ci
+          STAGING_URL=https://$STAGING_URL npm run test:e2e
+
+      - name: Run smoke tests
+        run: |
+          STAGING_URL=$(kubectl get service frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          # Health check
+          curl -f https://$STAGING_URL/health || exit 1
+          
+          # API health check
+          API_URL=$(kubectl get service backend-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          curl -f https://$API_URL/health || exit 1
+          
+          # Database connectivity check
+          curl -f https://$API_URL/ready || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Blue-Green Deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update image tags in deployment manifests
+          sed -i "s|IMAGE_TAG|${{ github.sha }}|g" k8s/production/*.yaml
+          
+          # Apply database migrations
+          kubectl apply -f k8s/production/migration-job.yaml
+          kubectl wait --for=condition=complete job/db-migration --timeout=300s
+          
+          # Deploy to green environment
+          kubectl apply -f k8s/production/green/
+          
+          # Wait for green deployment to be ready
+          kubectl rollout status deployment/backend-deployment-green --timeout=600s
+          kubectl rollout status deployment/frontend-deployment-green --timeout=600s
+          
+          # Run health checks on green environment
+          GREEN_URL=$(kubectl get service frontend-service-green -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          # Wait for services to be ready
+          sleep 60
+          
+          # Health checks
+          curl -f https://$GREEN_URL/health || exit 1
+          
+          GREEN_API_URL=$(kubectl get service backend-service-green -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          curl -f https://$GREEN_API_URL/health || exit 1
+          curl -f https://$GREEN_API_URL/ready || exit 1
+
+      - name: Switch Traffic to Green
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update service selectors to point to green deployment
+          kubectl patch service frontend-service -p '{"spec":{"selector":{"version":"green"}}}'
+          kubectl patch service backend-service -p '{"spec":{"selector":{"version":"green"}}}'
+          
+          # Wait for traffic switch
+          sleep 30
+
+      - name: Post-deployment smoke tests
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          PROD_URL=$(kubectl get service frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          API_URL=$(kubectl get service backend-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          # Comprehensive smoke tests
+          curl -f https://$PROD_URL/health || exit 1
+          curl -f https://$API_URL/health || exit 1
+          curl -f https://$API_URL/ready || exit 1
+          
+          # Test critical endpoints
+          curl -f -H "Authorization: Bearer ${{ secrets.SMOKE_TEST_TOKEN }}" https://$API_URL/api/employees || exit 1
+
+      - name: Clean up Blue Environment
+        if: success()
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Remove blue deployment after successful green deployment
+          kubectl delete deployment backend-deployment-blue --ignore-not-found=true
+          kubectl delete deployment frontend-deployment-blue --ignore-not-found=true
+          kubectl delete service backend-service-blue --ignore-not-found=true
+          kubectl delete service frontend-service-blue --ignore-not-found=true
+
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Rollback to blue environment
+          kubectl patch service frontend-service -p '{"spec":{"selector":{"version":"blue"}}}'
+          kubectl patch service backend-service -p '{"spec":{"selector":{"version":"blue"}}}'
+          
+          # Clean up failed green deployment
+          kubectl delete deployment backend-deployment-green --ignore-not-found=true
+          kubectl delete deployment frontend-deployment-green --ignore-not-found=true
+          
+          exit 1
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+      - name: Notify Slack on Success
+        if: needs.deploy-production.result == 'success'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: '🚀 Production deployment successful!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify Slack on Failure
+        if: needs.deploy-production.result == 'failure' || needs.deploy-staging.result == 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '❌ Deployment failed!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

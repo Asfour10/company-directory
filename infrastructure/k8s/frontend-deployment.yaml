@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: company-directory-frontend
+  namespace: company-directory
+  labels:
+    app: company-directory-frontend
+    tier: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: company-directory-frontend
+  template:
+    metadata:
+      labels:
+        app: company-directory-frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: company-directory/frontend:latest
+        ports:
+        - containerPort: 80
+          name: http
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+      
+      # Volumes
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+      - name: nginx-logs
+        emptyDir: {}
+      
+      # Pod security context
+      securityContext:
+        fsGroup: 1001
+      
+      # Service account
+      serviceAccountName: company-directory-frontend
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: company-directory-frontend
+  namespace: company-directory
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: company-directory-frontend-service
+  namespace: company-directory
+  labels:
+    app: company-directory-frontend
+spec:
+  selector:
+    app: company-directory-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: company-directory-frontend-hpa
+  namespace: company-directory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: company-directory-frontend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

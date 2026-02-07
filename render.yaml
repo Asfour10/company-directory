@@ -1,0 +1,76 @@
+# Render.com Blueprint for Free Tier Deployment
+# This file enables one-click deployment to Render's free tier
+
+services:
+  # Backend API Service
+  - type: web
+    name: company-directory-backend
+    env: node
+    region: oregon  # Choose: oregon, frankfurt, singapore
+    plan: free
+    buildCommand: cd backend && npm install && npx prisma generate && npm run build
+    startCommand: cd backend && npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: REDIS_URL
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://company-directory-frontend.onrender.com
+      - key: API_URL
+        value: https://company-directory-backend.onrender.com
+      - key: CORS_ORIGINS
+        value: https://company-directory-frontend.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_METRICS
+        value: false  # Disable to reduce resource usage on free tier
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+
+  # Frontend Static Site
+  - type: web
+    name: company-directory-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://company-directory-backend.onrender.com
+
+# Note: After deployment, you need to:
+# 1. Set DATABASE_URL in backend service (from Neon.tech)
+# 2. Set REDIS_URL in backend service (from Upstash)
+# 3. Run database migrations via Render shell:
+#    npm run prisma:migrate deploy
+# 4. Create initial admin user:
+#    npm run seed:production

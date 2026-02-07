@@ -1,0 +1,32 @@
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src'],
+  testMatch: ['**/*.property.test.ts'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    'auth.service.property.test.ts',
+    'employee.service.property.test.ts',
+    'admin-access-control.property.test.ts',
+    'admin-employee-management.property.test.ts',
+    'employee-edit-permission.property.test.ts',
+    'employee-update-validation.property.test.ts',
+    'tenant.service.property.test.ts',
+    'tenant-logo-upload.property.test.ts',
+    'analytics.service.property.test.ts',
+    'data-consistency.property.test.ts',
+  ],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/*.test.{ts,tsx}',
+    '!src/test-*.ts',
+  ],
+  coverageDirectory: 'coverage',
+  verbose: true,
+  testTimeout: 30000,
+  // Don't use test-setup.ts for integration tests
+  // setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
+};

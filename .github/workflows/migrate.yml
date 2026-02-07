@@ -1,0 +1,126 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to migrate'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      action:
+        description: 'Migration action'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - rollback
+          - status
+      backup_file:
+        description: 'Backup file for rollback (optional)'
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  migrate:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Set environment variables
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            echo "DATABASE_URL_STAGING=${{ secrets.DATABASE_URL_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "DATABASE_URL_PRODUCTION=${{ secrets.DATABASE_URL_PRODUCTION }}" >> $GITHUB_ENV
+          fi
+
+      - name: Run migration
+        run: |
+          chmod +x scripts/migrate.sh
+          ./scripts/migrate.sh ${{ github.event.inputs.action }} ${{ github.event.inputs.environment }}
+
+      - name: Verify migration
+        if: github.event.inputs.action == 'deploy'
+        run: |
+          cd backend
+          npx prisma migrate status
+
+      - name: Create migration report
+        if: always()
+        run: |
+          echo "## Migration Report" > migration-report.md
+          echo "- **Environment**: ${{ github.event.inputs.environment }}" >> migration-report.md
+          echo "- **Action**: ${{ github.event.inputs.action }}" >> migration-report.md
+          echo "- **Status**: ${{ job.status }}" >> migration-report.md
+          echo "- **Timestamp**: $(date -u)" >> migration-report.md
+          
+          if [ "${{ github.event.inputs.action }}" = "deploy" ]; then
+            echo "- **Applied Migrations**:" >> migration-report.md
+            cd backend
+            npx prisma migrate status --json | jq -r '.appliedMigrations[] | "  - " + .name' >> ../migration-report.md
+          fi
+
+      - name: Upload migration report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: migration-report-${{ github.event.inputs.environment }}-${{ github.run_number }}
+          path: migration-report.md
+
+      - name: Notify on success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: |
+            ✅ Database migration successful!
+            Environment: ${{ github.event.inputs.environment }}
+            Action: ${{ github.event.inputs.action }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            ❌ Database migration failed!
+            Environment: ${{ github.event.inputs.environment }}
+            Action: ${{ github.event.inputs.action }}
+            Please check the logs and consider rollback if necessary.
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

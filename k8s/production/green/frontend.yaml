@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment-green
+  namespace: company-directory-production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+      version: green
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: green
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/company/company-directory-frontend:IMAGE_TAG
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "200m"
+          limits:
+            memory: "256Mi"
+            cpu: "400m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service-green
+  namespace: company-directory-production
+spec:
+  selector:
+    app: frontend
+    version: green
+  ports:
+  - port: 80
+    targetPort: 80

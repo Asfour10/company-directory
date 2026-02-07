@@ -1,0 +1,196 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: company-directory-backend
+  namespace: company-directory
+  labels:
+    app: company-directory-backend
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: company-directory-backend
+  template:
+    metadata:
+      labels:
+        app: company-directory-backend
+        tier: backend
+    spec:
+      containers:
+      - name: backend
+        image: company-directory/backend:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        # Configuration from ConfigMap
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: company-directory-config
+              key: NODE_ENV
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: company-directory-config
+              key: LOG_LEVEL
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: company-directory-config
+              key: PORT
+        
+        # Secrets
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: REDIS_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: JWT_SECRET
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: JWT_REFRESH_SECRET
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: SESSION_SECRET
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: company-directory-secrets
+              key: ENCRYPTION_KEY
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts for temporary files
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: uploads
+          mountPath: /app/uploads
+      
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: uploads
+        emptyDir: {}
+      
+      # Pod security context
+      securityContext:
+        fsGroup: 1001
+      
+      # Service account
+      serviceAccountName: company-directory-backend
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: company-directory-backend
+  namespace: company-directory
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: company-directory-backend-service
+  namespace: company-directory
+  labels:
+    app: company-directory-backend
+spec:
+  selector:
+    app: company-directory-backend
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: company-directory-backend-hpa
+  namespace: company-directory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: company-directory-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

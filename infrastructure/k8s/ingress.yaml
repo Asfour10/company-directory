@@ -1,0 +1,128 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: company-directory-ingress
+  namespace: company-directory
+  annotations:
+    # NGINX Ingress Controller annotations
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    
+    # SSL certificate (cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Gzip compression
+    nginx.ingress.kubernetes.io/enable-gzip: "true"
+    nginx.ingress.kubernetes.io/gzip-types: "application/javascript,application/json,text/css,text/plain,text/xml"
+    
+spec:
+  tls:
+  - hosts:
+    - company-directory.example.com
+    - "*.company-directory.example.com"
+    secretName: company-directory-tls
+  
+  rules:
+  # Main domain
+  - host: company-directory.example.com
+    http:
+      paths:
+      # API routes to backend
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: company-directory-backend-service
+            port:
+              number: 3000
+      
+      # Health checks
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: company-directory-backend-service
+            port:
+              number: 3000
+      
+      - path: /ready
+        pathType: Exact
+        backend:
+          service:
+            name: company-directory-backend-service
+            port:
+              number: 3000
+      
+      # Metrics (restrict access in production)
+      - path: /metrics
+        pathType: Exact
+        backend:
+          service:
+            name: company-directory-backend-service
+            port:
+              number: 9090
+      
+      # Frontend routes (catch-all)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: company-directory-frontend-service
+            port:
+              number: 80
+  
+  # Tenant subdomains
+  - host: "*.company-directory.example.com"
+    http:
+      paths:
+      # API routes to backend
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: company-directory-backend-service
+            port:
+              number: 3000
+      
+      # Frontend routes (catch-all)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: company-directory-frontend-service
+            port:
+              number: 80
+
+---
+# ClusterIssuer for Let's Encrypt SSL certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@company-directory.example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx

@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: company-directory-config
+  namespace: company-directory
+data:
+  # Backend configuration
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  PORT: "3000"
+  
+  # Database configuration
+  DB_POOL_MIN: "5"
+  DB_POOL_MAX: "50"
+  DB_POOL_TIMEOUT: "20000"
+  DB_SSL_MODE: "require"
+  
+  # Redis configuration
+  REDIS_DB: "0"
+  REDIS_CONNECT_TIMEOUT: "10000"
+  REDIS_COMMAND_TIMEOUT: "5000"
+  
+  # JWT configuration
+  JWT_EXPIRES_IN: "8h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  
+  # Cache TTL settings
+  CACHE_TTL_EMPLOYEE_PROFILE: "300"
+  CACHE_TTL_SEARCH_RESULTS: "300"
+  CACHE_TTL_TENANT_CONFIG: "3600"
+  CACHE_TTL_SESSION: "28800"
+  
+  # Feature flags
+  FEATURE_ANALYTICS: "true"
+  FEATURE_CUSTOM_FIELDS: "true"
+  FEATURE_BULK_IMPORT: "true"
+  FEATURE_SCIM: "true"
+  FEATURE_BILLING: "true"
+  FEATURE_ENCRYPTION: "true"
+  FEATURE_GDPR: "true"
+  
+  # Monitoring
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_ENABLED: "true"
+  
+  # File upload
+  MAX_FILE_SIZE: "2097152"
+  ALLOWED_FILE_TYPES: "image/jpeg,image/png,image/gif,image/webp"
+  
+  # Rate limiting
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"

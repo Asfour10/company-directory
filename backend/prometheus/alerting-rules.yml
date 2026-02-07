@@ -1,0 +1,122 @@
+groups:
+  - name: company-directory-alerts
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: (rate(http_requests_total{status_code=~"5.."}[5m]) / rate(http_requests_total[5m])) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: company-directory
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% for the last 5 minutes, which is above the 5% threshold"
+          runbook_url: "https://docs.company-directory.com/runbooks/high-error-rate"
+
+      # High API latency alert
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s for the last 5 minutes, which is above the 2s threshold"
+          runbook_url: "https://docs.company-directory.com/runbooks/high-latency"
+
+      # Database connection issues
+      - alert: DatabaseConnectionDown
+        expr: db_connections_active == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: company-directory
+        annotations:
+          summary: "Database connection is down"
+          description: "No active database connections detected"
+          runbook_url: "https://docs.company-directory.com/runbooks/database-connection"
+
+      # Redis connection issues
+      - alert: RedisConnectionDown
+        expr: redis_connections_active == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "Redis connection is down"
+          description: "No active Redis connections detected. Cache functionality may be impaired"
+          runbook_url: "https://docs.company-directory.com/runbooks/redis-connection"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024 / 1024) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}GB, which may indicate a memory leak"
+          runbook_url: "https://docs.company-directory.com/runbooks/high-memory"
+
+      # Service down alert
+      - alert: ServiceDown
+        expr: up{job="company-directory"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: company-directory
+        annotations:
+          summary: "Company Directory service is down"
+          description: "The Company Directory service has been down for more than 1 minute"
+          runbook_url: "https://docs.company-directory.com/runbooks/service-down"
+
+      # High request rate (potential DDoS)
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "Unusually high request rate detected"
+          description: "Request rate is {{ $value }} requests/second, which may indicate a DDoS attack"
+          runbook_url: "https://docs.company-directory.com/runbooks/high-request-rate"
+
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: (rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))) * 100 < 70
+        for: 5m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "Low cache hit rate detected"
+          description: "Cache hit rate is {{ $value }}%, which is below the 70% threshold"
+          runbook_url: "https://docs.company-directory.com/runbooks/low-cache-hit-rate"
+
+      # Database query latency
+      - alert: HighDatabaseLatency
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+          service: company-directory
+        annotations:
+          summary: "High database query latency detected"
+          description: "95th percentile database query latency is {{ $value }}s, which is above the 1s threshold"
+          runbook_url: "https://docs.company-directory.com/runbooks/high-db-latency"
+
+      # Health check failures
+      - alert: HealthCheckFailure
+        expr: increase(http_requests_total{route="/health", status_code!="200"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: company-directory
+        annotations:
+          summary: "Health check failures detected"
+          description: "Health check endpoint is returning non-200 status codes"
+          runbook_url: "https://docs.company-directory.com/runbooks/health-check-failure"

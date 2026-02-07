@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Debouncing Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .demo-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .search-call {
+            color: #007bff;
+        }
+        .debounced {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Debouncing Demo</h1>
+    <p>This demo shows how the 300ms debouncing works. Type in the input below and watch the log:</p>
+    
+    <div class="demo-container">
+        <h3>Search Input (300ms debounce)</h3>
+        <input type="text" id="searchInput" placeholder="Type to search employees...">
+        <div class="log" id="searchLog">
+            <div class="log-entry">Ready to search...</div>
+        </div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="demo-container">
+        <h3>How it works:</h3>
+        <ul>
+            <li><strong>Blue entries:</strong> Show when you type (immediate)</li>
+            <li><strong>Green entries:</strong> Show when the debounced search actually executes (after 300ms of no typing)</li>
+            <li>Notice how rapid typing doesn't trigger multiple searches</li>
+            <li>Only when you stop typing for 300ms does the search execute</li>
+        </ul>
+    </div>
+
+    <script>
+        let searchTimeout;
+        let searchCount = 0;
+        const log = document.getElementById('searchLog');
+        const searchInput = document.getElementById('searchInput');
+
+        function addLogEntry(message, className = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function simulateSearch(query) {
+            searchCount++;
+            addLogEntry(`🔍 SEARCH EXECUTED: "${query}" (Search #${searchCount})`, 'debounced');
+            
+            // Simulate API call
+            setTimeout(() => {
+                const resultCount = Math.floor(Math.random() * 50) + 1;
+                addLogEntry(`📊 Results: Found ${resultCount} employees matching "${query}"`);
+            }, 100);
+        }
+
+        function debounce(func, delay) {
+            return function(...args) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        const debouncedSearch = debounce(simulateSearch, 300);
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value;
+            
+            // Log immediate input
+            addLogEntry(`⌨️  Typed: "${query}"`, 'search-call');
+            
+            if (query.trim()) {
+                // This will be debounced
+                debouncedSearch(query);
+            } else {
+                clearTimeout(searchTimeout);
+                addLogEntry('🚫 Search cancelled (empty query)');
+            }
+        });
+
+        function clearLog() {
+            log.innerHTML = '<div class="log-entry">Log cleared...</div>';
+            searchCount = 0;
+        }
+
+        // Add initial demo
+        setTimeout(() => {
+            addLogEntry('💡 Try typing "John Doe" quickly to see debouncing in action!');
+        }, 1000);
+    </script>
+</body>
+</html>

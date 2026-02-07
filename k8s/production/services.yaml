@@ -1,0 +1,29 @@
+# Main production services that switch between blue and green
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: company-directory-production
+spec:
+  selector:
+    app: backend
+    version: blue  # Initially points to blue, switches to green during deployment
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: company-directory-production
+spec:
+  selector:
+    app: frontend
+    version: blue  # Initially points to blue, switches to green during deployment
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
