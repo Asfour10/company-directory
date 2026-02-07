@@ -89,7 +89,7 @@ export class SessionService {
    */
   private static async getUserIdFromTokenHash(tokenHash: string): Promise<string | null> {
     try {
-      const session = await prisma.session.findUnique({
+      const session = await prisma.session.findFirst({
         where: { tokenHash },
         select: { userId: true },
       });
@@ -107,7 +107,7 @@ export class SessionService {
     const userId = await this.getUserIdFromTokenHash(tokenHash);
     
     // Delete from database
-    await prisma.session.delete({
+    await prisma.session.deleteMany({
       where: {
         tokenHash,
       },

@@ -32,6 +32,12 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/services/scim.service.ts",
+    "src/services/scim-mapping.service.ts",
+    "src/services/sso.service.ts",
+    "src/routes/scim.routes.ts",
+    "src/middleware/scim-auth.middleware.ts",
+    "src/types/scim.types.ts"
   ]
 }
