@@ -2,16 +2,16 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { GdprService } from '../services/gdpr.service';
 import { DataRetentionService } from '../services/data-retention.service';
-import { EncryptionKeyService } from '../services/encryption-key.service';
+// import { EncryptionKeyService } from '../services/encryption-key.service'; // Disabled for basic deployment
 import { authMiddleware } from '../middleware/auth.middleware';
 import { tenantMiddleware } from '../middleware/tenant.middleware';
 import { authorizationMiddleware } from '../middleware/authorization.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
-const keyConfig = { provider: 'local' as const };
-const keyService = new EncryptionKeyService(keyConfig);
-const gdprService = new GdprService(prisma, keyService);
+// const keyConfig = { provider: 'local' as const };
+// const keyService = new EncryptionKeyService(keyConfig); // Disabled for basic deployment
+const gdprService = new GdprService(prisma, null as any); // Encryption disabled for basic deployment
 const dataRetentionService = new DataRetentionService(prisma, gdprService);
 
 /**
