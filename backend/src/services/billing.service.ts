@@ -5,16 +5,25 @@ import { notificationService } from './notification.service';
 const prisma = new PrismaClient();
 
 export class BillingService {
-  private stripe: Stripe;
+  private stripe: Stripe | null;
 
   constructor() {
     if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is required');
+      console.warn('STRIPE_SECRET_KEY not configured - billing features will be disabled');
+      this.stripe = null;
+      return;
     }
     
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2023-10-16',
     });
+  }
+
+  private ensureStripeConfigured(): Stripe {
+    if (!this.stripe) {
+      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+    }
+    return this.stripe;
   }
 
   /**
@@ -48,7 +57,7 @@ export class BillingService {
 
       for (const plan of plans) {
         // Create product
-        const product = await this.stripe.products.create({
+        const product = await this.ensureStripeConfigured().products.create({
           name: `Company Directory ${plan.name}`,
           description: `${plan.name} plan with up to ${plan.userLimit} users`,
           metadata: {
@@ -58,7 +67,7 @@ export class BillingService {
         });
 
         // Create monthly price
-        const monthlyPrice = await this.stripe.prices.create({
+        const monthlyPrice = await this.ensureStripeConfigured().prices.create({
           product: product.id,
           unit_amount: plan.monthlyPrice,
           currency: 'usd',
@@ -72,7 +81,7 @@ export class BillingService {
         });
 
         // Create yearly price
-        const yearlyPrice = await this.stripe.prices.create({
+        const yearlyPrice = await this.ensureStripeConfigured().prices.create({
           product: product.id,
           unit_amount: plan.yearlyPrice,
           currency: 'usd',
@@ -106,7 +115,7 @@ export class BillingService {
    */
   async createCustomer(tenantId: string, email: string, name: string) {
     try {
-      const customer = await this.stripe.customers.create({
+      const customer = await this.ensureStripeConfigured().customers.create({
         email,
         name,
         metadata: {
@@ -126,7 +135,7 @@ export class BillingService {
    */
   async createSubscription(customerId: string, priceId: string, tenantId: string) {
     try {
-      const subscription = await this.stripe.subscriptions.create({
+      const subscription = await this.ensureStripeConfigured().subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
         metadata: {
@@ -149,9 +158,9 @@ export class BillingService {
    */
   async updateSubscription(subscriptionId: string, newPriceId: string) {
     try {
-      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+      const subscription = await this.ensureStripeConfigured().subscriptions.retrieve(subscriptionId);
       
-      const updatedSubscription = await this.stripe.subscriptions.update(subscriptionId, {
+      const updatedSubscription = await this.ensureStripeConfigured().subscriptions.update(subscriptionId, {
         items: [{
           id: subscription.items.data[0].id,
           price: newPriceId,
@@ -171,7 +180,7 @@ export class BillingService {
    */
   async cancelSubscription(subscriptionId: string) {
     try {
-      const subscription = await this.stripe.subscriptions.cancel(subscriptionId);
+      const subscription = await this.ensureStripeConfigured().subscriptions.cancel(subscriptionId);
       return subscription;
     } catch (error) {
       console.error('Error canceling subscription:', error);
@@ -184,7 +193,7 @@ export class BillingService {
    */
   async getSubscription(subscriptionId: string) {
     try {
-      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
+      const subscription = await this.ensureStripeConfigured().subscriptions.retrieve(subscriptionId, {
         expand: ['latest_invoice', 'customer'],
       });
       return subscription;
@@ -199,7 +208,7 @@ export class BillingService {
    */
   async createBillingPortalSession(customerId: string, returnUrl: string) {
     try {
-      const session = await this.stripe.billingPortal.sessions.create({
+      const session = await this.ensureStripeConfigured().billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
       });
@@ -293,7 +302,7 @@ export class BillingService {
     
     // Get tenant ID from customer metadata
     if (invoice.customer && typeof invoice.customer === 'string') {
-      const customer = await this.stripe.customers.retrieve(invoice.customer);
+      const customer = await this.ensureStripeConfigured().customers.retrieve(invoice.customer);
       if (customer && !customer.deleted) {
         const metadata = (customer as Stripe.Customer).metadata;
         const tenantId = metadata?.tenantId;
