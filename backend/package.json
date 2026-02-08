@@ -47,7 +47,7 @@
   "dependencies": {
     "@prisma/client": "^5.3.0",
     "aws-sdk": "^2.1450.0",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "csv-parse": "^5.5.0",
     "dotenv": "^16.3.1",
@@ -88,7 +88,7 @@
     "prisma": "^5.3.0",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
-    "tsx": "^3.12.7",
+    "tsx": "^4.21.0",
     "typescript": "^5.1.6"
   }
 }
