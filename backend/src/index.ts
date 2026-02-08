@@ -97,6 +97,20 @@ app.use('/', metricsRoutes);
 // Alerting endpoints
 app.use('/', alertingRoutes);
 
+// Root route for Render health checks
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Company Directory API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      ready: '/ready',
+      api: '/api'
+    }
+  });
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   Logger.warn('Route not found', {
