@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CustomFieldsAPI } from '../services/api';
-import { CustomField, CreateCustomFieldRequest, UpdateCustomFieldRequest, CustomFieldStatistics } from '../types/api';
+import { CustomField, CreateCustomFieldRequest, CustomFieldStatistics } from '../types/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { BrandedButton } from '../components/BrandedButton';
 

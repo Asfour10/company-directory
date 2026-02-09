@@ -422,7 +422,7 @@ export const AdminTenantSettingsPage: React.FC = () => {
         <div className="space-y-6">
           {/* Logo Upload */}
           <LogoUpload
-            currentLogoUrl={logoUrl}
+            currentLogoUrl={logoUrl || undefined}
             onLogoChange={handleLogoChange}
             disabled={saving}
           />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useIntersectionObserver, usePerformance } from '../hooks/usePerformance';
 
 interface VirtualizedListProps<T> {
@@ -29,16 +29,12 @@ export function VirtualizedList<T>({
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const { elementRef: loadMoreRef, observe } = useIntersectionObserver();
-  const { isMobileDevice, getOptimalChunkSize, useMemoizedCallback, useMemoizedValue } = usePerformance();
+  const { isMobileDevice, useMemoizedCallback, useMemoizedValue } = usePerformance();
 
   // Adjust overscan and chunk size for mobile devices
   const optimizedOverscan = useMemoizedValue(() => {
     return isMobileDevice ? Math.max(2, overscan - 2) : overscan;
   }, [isMobileDevice, overscan]);
-
-  const chunkSize = useMemoizedValue(() => {
-    return getOptimalChunkSize();
-  }, [getOptimalChunkSize]);
 
   // Calculate item heights if dynamic sizing is enabled
   const itemHeights = useMemoizedValue(() => {

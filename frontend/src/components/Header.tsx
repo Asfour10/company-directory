@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useBranding } from '../contexts/BrandingContext';
 import { useAuth } from '../contexts/AuthContext';
-import { BrandedButton } from './BrandedButton';
 import { OptimizedImage } from './OptimizedImage';
 
 interface HeaderProps {

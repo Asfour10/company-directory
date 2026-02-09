@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { TenantAPI, TenantSettings } from '../services/tenant';
+import { TenantAPI } from '../services/tenant';
 
 export interface BrandingTheme {
   logoUrl?: string;

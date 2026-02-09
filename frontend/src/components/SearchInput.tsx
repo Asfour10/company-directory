@@ -129,7 +129,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     onFocus?.();
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBlur = () => {
     setIsFocused(false);
     // Delay hiding suggestions to allow for clicks
     setTimeout(() => {
@@ -167,7 +167,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   // Get suggestion item styles
-  const getSuggestionStyles = (index: number, isSelected: boolean) => {
+  const getSuggestionStyles = (_index: number, isSelected: boolean) => {
     if (isSelected) {
       return {
         backgroundColor: `${brandedStyles.primaryBg.backgroundColor}10`, // 10% opacity

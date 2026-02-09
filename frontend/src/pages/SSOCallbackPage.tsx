@@ -31,7 +31,7 @@ export const SSOCallbackPage: React.FC = () => {
         }
 
         // Handle the SSO callback
-        const { user: userData, token } = await AuthService.handleSSOCallback(provider, code, state || undefined);
+        const { token } = await AuthService.handleSSOCallback(provider, code, state || undefined);
         
         // Store the token
         localStorage.setItem('authToken', token);
