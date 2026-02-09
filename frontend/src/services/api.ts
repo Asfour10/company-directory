@@ -16,7 +16,6 @@ import {
   CreateCustomFieldRequest,
   UpdateCustomFieldRequest,
   AuditLogResponse,
-  CustomFieldStatisticsResponse,
   AuditLogStatisticsResponse,
   AuditLogFilters
 } from '../types/api';
