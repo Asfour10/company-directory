@@ -1,13 +1,95 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 // import passport from 'passport'; // Disabled for basic deployment
 import { AuthService } from '../services/auth.service';
 // import { SSOService } from '../services/sso.service'; // Disabled for basic deployment
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../lib/database';
+import { AppError } from '../utils/errors';
 
 const router = Router();
 const authService = new AuthService();
 // const ssoService = new SSOService(); // Disabled for basic deployment
+
+/**
+ * POST /api/auth/login - Login with email and password
+ */
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      throw new AppError('Email and password are required', 400, 'BAD_REQUEST');
+    }
+
+    // Find user by email
+    const user = await prisma.user.findFirst({
+      where: { email: email.toLowerCase() },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid email or password', 401, 'UNAUTHORIZED');
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new AppError('Account is inactive', 403, 'FORBIDDEN');
+    }
+
+    // Verify password
+    if (!user.passwordHash) {
+      throw new AppError('Password authentication not configured for this user', 401, 'UNAUTHORIZED');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password', 401, 'UNAUTHORIZED');
+    }
+
+    // Generate tokens
+    const accessToken = authService.generateToken(user.id, user.tenantId, user.email, user.role);
+    const refreshToken = authService.generateRefreshToken(user.id);
+
+    // Create session
+    await authService.createSession(user.id, accessToken);
+
+    // Update last login
+    await authService.updateLastLogin(user.id);
+
+    // Return user data and tokens
+    res.json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        isActive: user.isActive,
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        error: {
+          code: error.code,
+          message: error.message,
+          requestId: req.id,
+        },
+      });
+    }
+    
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Login failed',
+        requestId: req.id,
+      },
+    });
+  }
+});
 
 /**
  * GET /api/auth/me - Get current user information
