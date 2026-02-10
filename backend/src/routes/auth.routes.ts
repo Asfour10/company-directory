@@ -71,6 +71,13 @@ router.post('/login', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    // Log the full error for debugging
+    console.error('Login error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error: error
+    });
+    
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({
         error: {
@@ -84,7 +91,7 @@ router.post('/login', async (req: Request, res: Response) => {
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'Login failed',
+        message: error instanceof Error ? error.message : 'Login failed',
         requestId: req.id,
       },
     });

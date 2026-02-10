@@ -79,9 +79,13 @@ async function testLogin() {
     console.error('❌ Login failed');
     if (error.response) {
       console.error('  Status:', error.response.status);
-      console.error('  Error:', error.response.data);
+      console.error('  Error:', JSON.stringify(error.response.data, null, 2));
+      if (error.response.data.stack) {
+        console.error('  Stack:', error.response.data.stack);
+      }
     } else {
       console.error('  Error:', error.message);
+      console.error('  Full error:', error);
     }
   }
 
