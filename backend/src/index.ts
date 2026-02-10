@@ -70,14 +70,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Initialize Passport - Disabled for basic deployment
 // app.use(passport.initialize());
 
-// Tenant extraction middleware (for routes that need tenant context)
-app.use('/api', tenantMiddleware);
-
 // Health check routes (no tenant context needed)
 app.use('/', healthRoutes);
 
-// API routes
+// Auth routes (no tenant context needed - tenant is determined during login)
 app.use('/api/auth', authRoutes);
+
+// Tenant extraction middleware (for routes that need tenant context)
+app.use('/api', tenantMiddleware);
+
+// API routes (these require tenant context)
 app.use('/api/employees', employeeRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/admin', adminRoutes);

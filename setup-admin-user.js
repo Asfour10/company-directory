@@ -19,9 +19,9 @@ async function setupAdminUser() {
     // Create tenant
     console.log('\nCreating tenant...');
     const tenantResult = await client.query(`
-      INSERT INTO "Tenant" (id, name, subdomain, "createdAt", "updatedAt")
-      SELECT gen_random_uuid(), 'My Company', 'mycompany', NOW(), NOW()
-      WHERE NOT EXISTS (SELECT 1 FROM "Tenant" LIMIT 1)
+      INSERT INTO tenants (id, name, subdomain, subscription_tier, user_limit, created_at, updated_at)
+      SELECT gen_random_uuid(), 'My Company', 'mycompany', 'free', 10, NOW(), NOW()
+      WHERE NOT EXISTS (SELECT 1 FROM tenants LIMIT 1)
       RETURNING id, name;
     `);
     
@@ -34,7 +34,7 @@ async function setupAdminUser() {
     // Create admin user
     console.log('\nCreating admin user...');
     const userResult = await client.query(`
-      INSERT INTO "User" (id, email, "passwordHash", "firstName", "lastName", role, "tenantId", "createdAt", "updatedAt")
+      INSERT INTO users (id, email, password_hash, first_name, last_name, role, tenant_id, created_at, updated_at)
       VALUES (
         gen_random_uuid(),
         'admin@company.com',
@@ -42,11 +42,11 @@ async function setupAdminUser() {
         'Admin',
         'User',
         'super_admin',
-        (SELECT id FROM "Tenant" LIMIT 1),
+        (SELECT id FROM tenants LIMIT 1),
         NOW(),
         NOW()
       )
-      RETURNING id, email, "firstName", "lastName", role;
+      RETURNING id, email, first_name, last_name, role;
     `);
     
     console.log('✓ Admin user created:', userResult.rows[0]);
@@ -56,12 +56,12 @@ async function setupAdminUser() {
     const verifyResult = await client.query(`
       SELECT 
         u.email,
-        u."firstName",
-        u."lastName",
+        u.first_name,
+        u.last_name,
         u.role,
         t.name as tenant_name
-      FROM "User" u
-      JOIN "Tenant" t ON u."tenantId" = t.id;
+      FROM users u
+      JOIN tenants t ON u.tenant_id = t.id;
     `);
     
     console.log('\n=== Database Setup Complete ===');

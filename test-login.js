@@ -22,14 +22,14 @@ async function testLogin() {
       SELECT 
         u.id,
         u.email,
-        u."firstName",
-        u."lastName",
+        u.first_name,
+        u.last_name,
         u.role,
-        u."passwordHash",
+        u.password_hash,
         t.name as tenant_name,
         t.id as tenant_id
-      FROM "User" u
-      JOIN "Tenant" t ON u."tenantId" = t.id
+      FROM users u
+      JOIN tenants t ON u.tenant_id = t.id
       WHERE u.email = 'admin@company.com';
     `);
     
@@ -42,10 +42,10 @@ async function testLogin() {
     
     console.log('✓ User found in database:');
     console.log('  Email:', result.rows[0].email);
-    console.log('  Name:', result.rows[0].firstName, result.rows[0].lastName);
+    console.log('  Name:', result.rows[0].first_name, result.rows[0].last_name);
     console.log('  Role:', result.rows[0].role);
     console.log('  Tenant:', result.rows[0].tenant_name);
-    console.log('  Password hash:', result.rows[0].passwordHash.substring(0, 20) + '...');
+    console.log('  Password hash:', result.rows[0].password_hash.substring(0, 20) + '...');
     
     await client.end();
   } catch (error) {
