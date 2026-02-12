@@ -54,8 +54,8 @@ class RedisClient {
       this.client = createClient({
         url: redisUrl,
         socket: {
-          reconnectStrategy: (retries) => Math.min(retries * 50, 1000),
-          connectTimeout: 10000,
+          reconnectStrategy: false, // Disable reconnection attempts
+          connectTimeout: 5000,
         },
         // Connection pooling configuration
         isolationPoolOptions: {
@@ -65,7 +65,10 @@ class RedisClient {
       });
 
       this.client.on('error', (err) => {
-        console.error('Redis Client Error:', err);
+        // Only log once, don't spam logs
+        if (this.isConnected) {
+          console.error('Redis Client Error:', err.message);
+        }
         this.isConnected = false;
       });
 
@@ -77,10 +80,6 @@ class RedisClient {
       this.client.on('disconnect', () => {
         console.log('Redis Client Disconnected');
         this.isConnected = false;
-      });
-
-      this.client.on('reconnecting', () => {
-        console.log('Redis Client Reconnecting...');
       });
 
       await this.client.connect();
