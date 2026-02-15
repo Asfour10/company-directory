@@ -1,0 +1,5 @@
+This file forces a rebuild of the frontend to ensure environment variables are properly injected.
+
+Created: 2026-02-15
+
+The VITE_API_URL should be: https://company-directory-backend-o3xm.onrender.com
