@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #3B82F6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563EB;
+        }
+        .btn-secondary {
+            background: #6B7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #4B5563;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .success {
+            background-color: #D1FAE5;
+            border-color: #10B981;
+            color: #065F46;
+        }
+        .error {
+            background-color: #FEE2E2;
+            border-color: #EF4444;
+            color: #991B1B;
+        }
+        .warning {
+            background-color: #FEF3C7;
+            border-color: #F59E0B;
+            color: #92400E;
+        }
+        .info {
+            background-color: #DBEAFE;
+            border-color: #3B82F6;
+            color: #1E40AF;
+        }
+        pre {
+            background: #F3F4F6;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 5px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: #F9FAFB;
+            border-radius: 5px;
+        }
+        .step-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3B82F6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Login Diagnostic Tool</h1>
+        <p class="subtitle">This tool will help identify why login is failing on your deployed frontend.</p>
+        
+        <div class="step">
+            <div class="step-title">Step 1: Test Backend Connection</div>
+            <button class="btn-primary" onclick="testBackend()">Test Backend Health</button>
+        </div>
+        
+        <div class="step">
+            <div class="step-title">Step 2: Test Login API</div>
+            <button class="btn-primary" onclick="testLogin()">Test Login Endpoint</button>
+        </div>
+        
+        <div class="step">
+            <div class="step-title">Step 3: Test CORS</div>
+            <button class="btn-primary" onclick="testCORS()">Test CORS Configuration</button>
+        </div>
+        
+        <div class="step">
+            <div class="step-title">Step 4: Full Diagnostic</div>
+            <button class="btn-secondary" onclick="runFullDiagnostic()">Run All Tests</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        const BACKEND_URL = 'https://company-directory-backend-o3xm.onrender.com';
+        const FRONTEND_URL = 'https://company-directory-frontend.onrender.com';
+        
+        function showLoading(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="result info">
+                    <div class="loading"></div>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+        
+        function showResult(type, title, details) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="result ${type}">
+                    <h3>${title}</h3>
+                    ${details}
+                </div>
+            `;
+        }
+        
+        async function testBackend() {
+            showLoading('Testing backend connection...');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', '✓ Backend is Online!', `
+                        <p>Status: ${response.status} OK</p>
+                        <p>Backend URL: ${BACKEND_URL}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `);
+                } else {
+                    showResult('error', '✗ Backend Error', `
+                        <p>Status: ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `);
+                }
+            } catch (error) {
+                showResult('error', '✗ Cannot Reach Backend', `
+                    <p>Error: ${error.message}</p>
+                    <p>This could mean:</p>
+                    <ul>
+                        <li>Backend service is down</li>
+                        <li>Network connectivity issue</li>
+                        <li>CORS blocking the request</li>
+                    </ul>
+                `);
+            }
+        }
+        
+        async function testLogin() {
+            showLoading('Testing login endpoint...');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@company.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', '✓ Login Successful!', `
+                        <p>Status: ${response.status} OK</p>
+                        <p>User: ${data.user.email}</p>
+                        <p>Role: ${data.user.role}</p>
+                        <p>Access Token: ${data.accessToken ? 'Received ✓' : 'Missing ✗'}</p>
+                        <p>Refresh Token: ${data.refreshToken ? 'Received ✓' : 'Missing ✗'}</p>
+                        <p><strong>✓ Backend login is working correctly!</strong></p>
+                        <p>If frontend login fails, the issue is in the frontend code or environment variables.</p>
+                    `);
+                } else {
+                    showResult('error', '✗ Login Failed', `
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${data.error?.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `);
+                }
+            } catch (error) {
+                showResult('error', '✗ Login Request Failed', `
+                    <p>Error: ${error.message}</p>
+                    <p>This could mean:</p>
+                    <ul>
+                        <li>CORS is blocking the request</li>
+                        <li>Network error</li>
+                        <li>Backend is not responding</li>
+                    </ul>
+                `);
+            }
+        }
+        
+        async function testCORS() {
+            showLoading('Testing CORS configuration...');
+            
+            try {
+                // Test with OPTIONS request (preflight)
+                const optionsResponse = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': FRONTEND_URL,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                    }
+                });
+                
+                const allowOrigin = optionsResponse.headers.get('Access-Control-Allow-Origin');
+                const allowMethods = optionsResponse.headers.get('Access-Control-Allow-Methods');
+                const allowHeaders = optionsResponse.headers.get('Access-Control-Allow-Headers');
+                
+                if (allowOrigin) {
+                    showResult('success', '✓ CORS is Configured', `
+                        <p>Access-Control-Allow-Origin: ${allowOrigin}</p>
+                        <p>Access-Control-Allow-Methods: ${allowMethods || 'Not specified'}</p>
+                        <p>Access-Control-Allow-Headers: ${allowHeaders || 'Not specified'}</p>
+                        <p><strong>CORS appears to be working correctly.</strong></p>
+                    `);
+                } else {
+                    showResult('warning', '⚠ CORS Headers Missing', `
+                        <p>The backend did not return CORS headers.</p>
+                        <p>This might cause issues with cross-origin requests.</p>
+                    `);
+                }
+            } catch (error) {
+                showResult('error', '✗ CORS Test Failed', `
+                    <p>Error: ${error.message}</p>
+                    <p>Could not complete CORS preflight request.</p>
+                `);
+            }
+        }
+        
+        async function runFullDiagnostic() {
+            showLoading('Running full diagnostic...');
+            
+            const results = {
+                backend: null,
+                login: null,
+                cors: null
+            };
+            
+            // Test 1: Backend Health
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                results.backend = response.ok ? 'PASS' : 'FAIL';
+            } catch (error) {
+                results.backend = 'ERROR';
+            }
+            
+            // Test 2: Login
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@company.com',
+                        password: 'admin123'
+                    })
+                });
+                results.login = response.ok ? 'PASS' : 'FAIL';
+            } catch (error) {
+                results.login = 'ERROR';
+            }
+            
+            // Test 3: CORS
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': FRONTEND_URL,
+                        'Access-Control-Request-Method': 'POST',
+                    }
+                });
+                const allowOrigin = response.headers.get('Access-Control-Allow-Origin');
+                results.cors = allowOrigin ? 'PASS' : 'FAIL';
+            } catch (error) {
+                results.cors = 'ERROR';
+            }
+            
+            // Generate report
+            const allPass = Object.values(results).every(r => r === 'PASS');
+            const type = allPass ? 'success' : 'warning';
+            
+            showResult(type, allPass ? '✓ All Tests Passed!' : '⚠ Some Tests Failed', `
+                <div style="margin: 15px 0;">
+                    <p><strong>Backend Health:</strong> ${getStatusBadge(results.backend)}</p>
+                    <p><strong>Login Endpoint:</strong> ${getStatusBadge(results.login)}</p>
+                    <p><strong>CORS Configuration:</strong> ${getStatusBadge(results.cors)}</p>
+                </div>
+                ${allPass ? `
+                    <p><strong>✓ Backend is fully functional!</strong></p>
+                    <p>If frontend login still fails, check:</p>
+                    <ul>
+                        <li>Make sure you click the "Email & Password" tab (not SSO)</li>
+                        <li>Try hard refresh on frontend (Ctrl+Shift+R)</li>
+                        <li>Check browser console for errors (F12)</li>
+                        <li>Verify VITE_API_URL environment variable in Render</li>
+                    </ul>
+                ` : `
+                    <p>Some tests failed. Run individual tests above for more details.</p>
+                `}
+            `);
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'PASS': '<span style="color: #10B981; font-weight: bold;">✓ PASS</span>',
+                'FAIL': '<span style="color: #EF4444; font-weight: bold;">✗ FAIL</span>',
+                'ERROR': '<span style="color: #F59E0B; font-weight: bold;">⚠ ERROR</span>'
+            };
+            return badges[status] || status;
+        }
+    </script>
+</body>
+</html>
