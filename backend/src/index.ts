@@ -55,12 +55,9 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration
+// CORS configuration - allow all origins for now to fix deployment
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'https://company-directory-frontend.onrender.com'
-  ],
+  origin: true, // Allow all origins temporarily
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
