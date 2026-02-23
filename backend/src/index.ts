@@ -39,6 +39,9 @@ const PORT = process.env.PORT || 3000;
 
 // CORS configuration - MUST BE FIRST to fix deployment
 app.use((req, res, next) => {
+  // Log CORS request for debugging
+  console.log(`[CORS] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  
   // Always set CORS headers for all requests
   const origin = req.headers.origin || '*';
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -47,8 +50,11 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   
+  console.log(`[CORS] Headers set - Allow-Origin: ${origin}`);
+  
   // Handle preflight requests immediately
   if (req.method === 'OPTIONS') {
+    console.log('[CORS] Handling OPTIONS preflight request');
     res.status(200).end();
     return;
   }
@@ -63,6 +69,9 @@ app.use(metricsMiddleware);
 
 // Security middleware
 app.use(helmet({
+  crossOriginResourcePolicy: false, // Disable to allow CORS
+  crossOriginOpenerPolicy: false,   // Disable to allow CORS
+  crossOriginEmbedderPolicy: false, // Disable to allow CORS
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
